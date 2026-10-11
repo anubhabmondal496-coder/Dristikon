@@ -1,5 +1,9 @@
 # BlindFold (VisionMate) 👁️🎙️
 
+<p align="center">
+  <img src="./Bengali_logo.png" alt="BlindFold Logo" width="240" />
+</p>
+
 An audio-first vision assistant for visually impaired people. It uses lightweight on-device / edge CNNs to give instant voice alerts for obstacles and identify paper currency notes in real time.
 
 Built to run with sub-400ms latency, zero sight required, and zero reliance on sighted volunteers or slow cloud LLMs.

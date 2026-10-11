@@ -21,6 +21,72 @@ class AppTheme {
   static const Color alertCriticalLight = Color(0xFFFEE2E2);  // Hazard red tint
   static const Color alertSafe = Color(0xFF16A34A);           // Safe path green
 
+  // ============================================================
+  // Shape-Aware Tactile Shadow & Border Helpers
+  // Ensures shadows perfectly follow widget shapes (no rectangular artifacts)
+  // ============================================================
+  static BoxDecoration tactileCardDecoration({
+    double radius = 22,
+    Color backgroundColor = cardBackground,
+    Color borderColor = cardBorder,
+    double borderWidth = 3.0,
+    double offsetY = 4.0,
+  }) {
+    return BoxDecoration(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: borderColor, width: borderWidth),
+      boxShadow: [
+        BoxShadow(
+          color: cardBorder,
+          offset: Offset(0, offsetY),
+          blurRadius: 0,
+        ),
+      ],
+    );
+  }
+
+  static BoxDecoration tactileButtonDecoration({
+    double radius = 16,
+    Color backgroundColor = cardBackground,
+    Color borderColor = cardBorder,
+    double borderWidth = 2.5,
+    double offsetY = 3.0,
+  }) {
+    return BoxDecoration(
+      color: backgroundColor,
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: borderColor, width: borderWidth),
+      boxShadow: [
+        BoxShadow(
+          color: cardBorder,
+          offset: Offset(0, offsetY),
+          blurRadius: 0,
+        ),
+      ],
+    );
+  }
+
+  static BoxDecoration tactileCircleDecoration({
+    Color backgroundColor = cardBackground,
+    Color borderColor = cardBorder,
+    double borderWidth = 2.5,
+    double offsetY = 3.0,
+  }) {
+    return BoxDecoration(
+      color: backgroundColor,
+      shape: BoxShape.circle,
+      border: Border.all(color: borderColor, width: borderWidth),
+      boxShadow: [
+        BoxShadow(
+          color: cardBorder,
+          offset: Offset(0, offsetY),
+          blurRadius: 0,
+        ),
+      ],
+    );
+  }
+
   static ThemeData get lightTactileTheme {
     return ThemeData(
       useMaterial3: true,

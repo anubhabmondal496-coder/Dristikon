@@ -35,6 +35,11 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   flutter_tts: ^4.2.5
+  camera: ^0.12.1
+  image: ^4.12.0
+  tflite_flutter: ^0.12.1
+  speech_to_text: ^7.5.0
+  video_player: ^2.14.1
 
 dev_dependencies:
   flutter_test:
@@ -60,6 +65,9 @@ flutter:
 
   assets:
     - assets/logo.png
+    - assets/currency_model.tflite
+    - assets/currency_labels.txt
+    - assets/bg.mp4
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

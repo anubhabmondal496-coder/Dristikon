@@ -32,7 +32,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
-
+/photos
+*.mp4
 # Symbolication related
 app.*.symbols
 
