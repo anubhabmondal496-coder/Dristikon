@@ -12,13 +12,13 @@ void main() async {
     DeviceOrientation.portraitUp,
   ]);
 
-  // Set immersive dark system UI navigation overlay
+  // Set system UI navigation overlay for Tactile Clarity Light Mode
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.light,
+      statusBarIconBrightness: Brightness.dark,
       systemNavigationBarColor: AppTheme.background,
-      systemNavigationBarIconBrightness: Brightness.light,
+      systemNavigationBarIconBrightness: Brightness.dark,
     ),
   );
 
@@ -36,7 +36,7 @@ class BlindFoldApp extends StatelessWidget {
     return MaterialApp(
       title: 'BlindFold',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTactileTheme,
+      theme: AppTheme.lightTactileTheme,
       home: const HomeScreen(),
     );
   }

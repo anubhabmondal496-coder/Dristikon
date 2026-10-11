@@ -51,18 +51,27 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
               Semantics(
                 label: "Exit Currency Reader and return to home menu",
                 button: true,
-                child: SizedBox(
+                child: Container(
                   height: 68,
+                  decoration: const BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.cardBorder,
+                        offset: Offset(0, 3),
+                        blurRadius: 0,
+                      ),
+                    ],
+                  ),
                   child: ElevatedButton.icon(
                     onPressed: () {
                       VoiceService.instance.speak("Exiting currency reader.");
                       Navigator.pop(context);
                     },
-                    icon: const Icon(Icons.arrow_back, size: 30, color: AppTheme.textPrimary),
+                    icon: const Icon(Icons.arrow_back, size: 28, color: AppTheme.cardBorder),
                     label: const Text(
                       "EXIT TO MENU",
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: AppTheme.cardBorder,
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
                       ),
@@ -71,6 +80,7 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                       backgroundColor: AppTheme.cardBackground,
                       side: const BorderSide(color: AppTheme.cardBorder, width: 2.5),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
                     ),
                   ),
                 ),
@@ -87,32 +97,48 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                     onTap: () {
                       VoiceService.instance.speak("Banknote is $_currentResult Rupees.");
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(22),
                     child: Container(
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
                         color: AppTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(22),
                         border: Border.all(
-                          color: _isScanning ? AppTheme.accentBlue : AppTheme.accentAmber,
-                          width: 3.5,
+                          color: _isScanning ? AppTheme.accentBlue : AppTheme.cardBorder,
+                          width: 3,
                         ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppTheme.cardBorder,
+                            offset: Offset(0, 5),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.payments,
-                            size: 64,
-                            color: AppTheme.accentAmber,
+                          Container(
+                            width: 76,
+                            height: 76,
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentBlueLight,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppTheme.cardBorder, width: 2.5),
+                            ),
+                            child: const Icon(
+                              Icons.payments,
+                              size: 42,
+                              color: AppTheme.cardBorder,
+                            ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 14),
                           const Text(
-                            "INDIAN CURRENCY",
+                            "INDIAN BANKNOTE",
                             style: TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 16,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w900,
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -120,28 +146,36 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                           Text(
                             "₹$_currentResult",
                             style: const TextStyle(
-                              color: AppTheme.textPrimary,
+                              color: AppTheme.cardBorder,
                               fontSize: 64,
                               fontWeight: FontWeight.w900,
                               letterSpacing: -1,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            "$_currentResult RUPEES",
-                            style: const TextStyle(
-                              color: AppTheme.accentAmber,
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentAmberLight,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.cardBorder, width: 1.5),
+                            ),
+                            child: Text(
+                              "$_currentResult RUPEES",
+                              style: const TextStyle(
+                                color: AppTheme.cardBorder,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            "Tap card to re-announce value",
+                            "Tap card anytime to re-announce value",
                             style: TextStyle(
                               color: AppTheme.textSecondary,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -156,9 +190,9 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
               const Text(
                 "TEST BANKNOTE DENOMINATIONS:",
                 style: TextStyle(
-                  color: AppTheme.textSecondary,
+                  color: AppTheme.cardBorder,
                   fontSize: 14,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   letterSpacing: 1.0,
                 ),
               ),
@@ -171,24 +205,36 @@ class _CurrencyScreenState extends State<CurrencyScreen> {
                   return Semantics(
                     label: "Select $note Rupees banknote",
                     button: true,
-                    child: SizedBox(
+                    child: Container(
                       width: (MediaQuery.of(context).size.width - 48) / 3,
                       height: 58,
+                      decoration: BoxDecoration(
+                        boxShadow: isSelected
+                            ? [
+                                const BoxShadow(
+                                  color: AppTheme.cardBorder,
+                                  offset: Offset(0, 3),
+                                  blurRadius: 0,
+                                ),
+                              ]
+                            : null,
+                      ),
                       child: ElevatedButton(
                         onPressed: () => _simulateScan(note),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: isSelected ? AppTheme.accentAmber : AppTheme.cardBackground,
-                          side: BorderSide(
-                            color: isSelected ? AppTheme.accentAmber : AppTheme.cardBorder,
+                          side: const BorderSide(
+                            color: AppTheme.cardBorder,
                             width: 2,
                           ),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           padding: EdgeInsets.zero,
+                          elevation: 0,
                         ),
                         child: Text(
                           "₹$note",
                           style: TextStyle(
-                            color: isSelected ? AppTheme.background : AppTheme.textPrimary,
+                            color: AppTheme.cardBorder,
                             fontSize: 20,
                             fontWeight: FontWeight.w900,
                           ),

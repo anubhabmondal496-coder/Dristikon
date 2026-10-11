@@ -20,7 +20,7 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
   @override
   void initState() {
     super.initState();
-    VoiceService.instance.speak("Walking radar active. Camera scanning forward.");
+    VoiceService.instance.speak("Obstacle Avoidance mode active. Camera scanning forward.");
   }
 
   void _nextObstacle() {
@@ -35,9 +35,9 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
       _isPaused = !_isPaused;
     });
     if (_isPaused) {
-      VoiceService.instance.speak("Walking radar paused.");
+      VoiceService.instance.speak("Obstacle radar paused.");
     } else {
-      VoiceService.instance.speak("Walking radar resumed.");
+      VoiceService.instance.speak("Obstacle radar resumed.");
     }
   }
 
@@ -54,9 +54,23 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
     }
   }
 
+  Color _getUrgencyBg(ObstacleUrgency urgency) {
+    switch (urgency) {
+      case ObstacleUrgency.critical:
+        return AppTheme.alertCriticalLight;
+      case ObstacleUrgency.warning:
+        return AppTheme.accentAmberLight;
+      case ObstacleUrgency.caution:
+        return AppTheme.accentBlueLight;
+      case ObstacleUrgency.info:
+        return const Color(0xFFDCFCE7);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final urgencyColor = _getUrgencyColor(_current.urgency);
+    final urgencyBg = _getUrgencyBg(_current.urgency);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -71,20 +85,29 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                 children: [
                   Expanded(
                     child: Semantics(
-                      label: "Exit Walking Radar and return to home menu",
+                      label: "Exit Obstacle Avoidance and return to home menu",
                       button: true,
-                      child: SizedBox(
+                      child: Container(
                         height: 68,
+                        decoration: const BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.cardBorder,
+                              offset: Offset(0, 3),
+                              blurRadius: 0,
+                            ),
+                          ],
+                        ),
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            VoiceService.instance.speak("Exiting walking radar.");
+                            VoiceService.instance.speak("Exiting obstacle mode.");
                             Navigator.pop(context);
                           },
-                          icon: const Icon(Icons.arrow_back, size: 30, color: AppTheme.textPrimary),
+                          icon: const Icon(Icons.arrow_back, size: 28, color: AppTheme.cardBorder),
                           label: const Text(
                             "EXIT",
                             style: TextStyle(
-                              color: AppTheme.textPrimary,
+                              color: AppTheme.cardBorder,
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                             ),
@@ -93,6 +116,7 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                             backgroundColor: AppTheme.cardBackground,
                             side: const BorderSide(color: AppTheme.cardBorder, width: 2.5),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
                           ),
                         ),
                       ),
@@ -103,18 +127,25 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                     label: _isPaused ? "Radar is currently paused" : "Radar is live active",
                     child: Container(
                       height: 68,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 18),
                       decoration: BoxDecoration(
-                        color: _isPaused ? AppTheme.cardBackground : AppTheme.cardBorder,
+                        color: _isPaused ? AppTheme.cardBackground : urgencyBg,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: urgencyColor, width: 2),
+                        border: Border.all(color: AppTheme.cardBorder, width: 2.5),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppTheme.cardBorder,
+                            offset: Offset(0, 3),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
                       alignment: Alignment.center,
                       child: Text(
-                        _isPaused ? "PAUSED" : "RADAR LIVE",
+                        _isPaused ? "PAUSED" : "ACTIVE",
                         style: TextStyle(
-                          color: urgencyColor,
-                          fontSize: 16,
+                          color: _isPaused ? AppTheme.cardBorder : urgencyColor,
+                          fontSize: 18,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.0,
                         ),
@@ -135,28 +166,35 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                     onTap: () {
                       VoiceService.instance.speak(_current.spokenText);
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(22),
                     child: Container(
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: AppTheme.cardBackground,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: urgencyColor, width: 3),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: AppTheme.cardBorder, width: 3),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: AppTheme.cardBorder,
+                            offset: Offset(0, 5),
+                            blurRadius: 0,
+                          ),
+                        ],
                       ),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
                             decoration: BoxDecoration(
-                              color: urgencyColor.withValues(alpha: 0.2),
+                              color: urgencyBg,
                               borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: urgencyColor, width: 1.5),
+                              border: Border.all(color: AppTheme.cardBorder, width: 2),
                             ),
                             child: Text(
                               "ZONE: ${_current.zoneLabel}",
                               style: TextStyle(
-                                color: urgencyColor,
+                                color: AppTheme.cardBorder,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.2,
@@ -168,17 +206,17 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                             _current.title,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 36,
+                              color: AppTheme.cardBorder,
+                              fontSize: 34,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0.5,
                             ),
                           ),
                           const SizedBox(height: 16),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                             decoration: BoxDecoration(
-                              color: AppTheme.background,
+                              color: AppTheme.cardBackgroundAlt,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(color: AppTheme.cardBorder, width: 2),
                             ),
@@ -188,7 +226,7 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                                   _current.distanceFormatted,
                                   style: TextStyle(
                                     color: urgencyColor,
-                                    fontSize: 32,
+                                    fontSize: 34,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
@@ -196,9 +234,9 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                                 Text(
                                   "APPROX. ${_current.stepsFormatted}",
                                   style: const TextStyle(
-                                    color: AppTheme.textSecondary,
+                                    color: AppTheme.cardBorder,
                                     fontSize: 20,
-                                    fontWeight: FontWeight.w800,
+                                    fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ],
@@ -209,18 +247,18 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                             _current.advice,
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              color: AppTheme.textPrimary,
+                              color: AppTheme.cardBorder,
                               fontSize: 18,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
                             ),
                           ),
                           const SizedBox(height: 12),
                           const Text(
-                            "Tap box to repeat voice alert",
+                            "Tap card anytime to repeat voice alert",
                             style: TextStyle(
                               color: AppTheme.textSecondary,
                               fontSize: 14,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -238,22 +276,33 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                     child: Semantics(
                       label: "Scan next obstacle in sequence",
                       button: true,
-                      child: SizedBox(
+                      child: Container(
                         height: 76,
+                        decoration: const BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.cardBorder,
+                              offset: Offset(0, 4),
+                              blurRadius: 0,
+                            ),
+                          ],
+                        ),
                         child: ElevatedButton.icon(
                           onPressed: _nextObstacle,
-                          icon: const Icon(Icons.radar, size: 34, color: AppTheme.background),
+                          icon: const Icon(Icons.radar, size: 32, color: AppTheme.cardBorder),
                           label: const Text(
                             "NEXT OBSTACLE",
                             style: TextStyle(
-                              color: AppTheme.background,
+                              color: AppTheme.cardBorder,
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppTheme.accentAmber,
+                            side: const BorderSide(color: AppTheme.cardBorder, width: 2.5),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 0,
                           ),
                         ),
                       ),
@@ -263,21 +312,31 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> {
                   Semantics(
                     label: _isPaused ? "Resume radar scanning" : "Pause radar scanning",
                     button: true,
-                    child: SizedBox(
+                    child: Container(
                       width: 80,
                       height: 76,
+                      decoration: const BoxDecoration(
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.cardBorder,
+                            offset: Offset(0, 4),
+                            blurRadius: 0,
+                          ),
+                        ],
+                      ),
                       child: ElevatedButton(
                         onPressed: _togglePause,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppTheme.cardBackground,
                           side: const BorderSide(color: AppTheme.cardBorder, width: 2.5),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          elevation: 0,
                           padding: EdgeInsets.zero,
                         ),
                         child: Icon(
                           _isPaused ? Icons.play_arrow : Icons.pause,
-                          size: 38,
-                          color: AppTheme.textPrimary,
+                          size: 36,
+                          color: AppTheme.cardBorder,
                         ),
                       ),
                     ),

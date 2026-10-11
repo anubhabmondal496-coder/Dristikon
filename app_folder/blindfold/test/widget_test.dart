@@ -8,6 +8,7 @@ void main() {
 
     // Verify that the title and key components render
     expect(find.text('BLINDFOLD'), findsOneWidget);
-    expect(find.text('TAP TO HEAR STATUS'), findsOneWidget);
+    expect(find.text('Obstacle Avoidance'), findsOneWidget);
+    expect(find.text('Currency Reader'), findsOneWidget);
   });
 }
