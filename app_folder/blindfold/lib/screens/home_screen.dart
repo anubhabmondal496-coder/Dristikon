@@ -1,9 +1,7 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:video_player/video_player.dart';
-import '../services/speech_service.dart';
 import '../services/voice_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/liquid_glass.dart';
 import 'walking_radar_screen.dart';
 import 'currency_screen.dart';
 
@@ -14,55 +12,13 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  bool _isVoiceAssistantListening = false;
-  String _recognizedSpeechText = "";
-  VideoPlayerController? _videoController;
-  bool _isVideoInitialized = false;
-
+class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _initVideoBackground();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _announceWelcome();
     });
-  }
-
-  Future<void> _initVideoBackground() async {
-    try {
-      final controller = VideoPlayerController.asset('assets/bg.mp4');
-      _videoController = controller;
-      await controller.initialize();
-      await controller.setLooping(true);
-      await controller.setVolume(0.0);
-      await controller.play();
-      if (mounted) {
-        setState(() {
-          _isVideoInitialized = true;
-        });
-      }
-    } catch (e) {
-      debugPrint("[Background Video Error]: $e");
-    }
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (_videoController == null || !_videoController!.value.isInitialized) return;
-    if (state == AppLifecycleState.resumed) {
-      _videoController?.play();
-    } else if (state == AppLifecycleState.inactive || state == AppLifecycleState.paused) {
-      _videoController?.pause();
-    }
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    _videoController?.dispose();
-    super.dispose();
   }
 
   void _announceWelcome() {
@@ -84,13 +40,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else {
       VoiceService.instance.speak("Starting Obstacle Avoidance mode.");
     }
-    _videoController?.pause();
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const WalkingRadarScreen()),
-    ).then((_) {
-      if (mounted) _videoController?.play();
-    });
+    );
   }
 
   // Double Tap Action: Start Currency Mode
@@ -100,105 +53,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } else {
       VoiceService.instance.speak("Starting Currency Reader mode.");
     }
-    _videoController?.pause();
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const CurrencyScreen()),
-    ).then((_) {
-      if (mounted) _videoController?.play();
-    });
-  }
-
-  // Voice Assistant Button Handler (Speech-to-Text)
-  Future<void> _handleVoiceAssistantPressed() async {
-    final isBengali = VoiceService.instance.isBengali;
-
-    if (_isVoiceAssistantListening) {
-      await SpeechService.instance.stopListening();
-      if (!mounted) return;
-      setState(() {
-        _isVoiceAssistantListening = false;
-      });
-      VoiceService.instance.speak(
-        isBengali ? "ভয়েস অ্যাসিস্ট্যান্ট বন্ধ করা হয়েছে।" : "Voice Assistant paused.",
-      );
-      return;
-    }
-
-    // Stop ongoing speech so microphone doesn't transcribe the app's own TTS output
-    await VoiceService.instance.stop();
-
-    setState(() {
-      _isVoiceAssistantListening = true;
-      _recognizedSpeechText = "";
-    });
-
-    final started = await SpeechService.instance.startListening(
-      isBengali: isBengali,
-      onResult: (words, isFinal) {
-        if (!mounted) return;
-        setState(() {
-          _recognizedSpeechText = words;
-        });
-
-        if (isFinal && words.trim().isNotEmpty) {
-          _executeVoiceCommand(words);
-        }
-      },
     );
-
-    if (!started) {
-      if (!mounted) return;
-      setState(() {
-        _isVoiceAssistantListening = false;
-      });
-      VoiceService.instance.speak(
-        isBengali
-            ? "মাইক্রোফোন চালু করা যায়নি। অনুগ্রহ করে সেটিংস পরীক্ষা করুন।"
-            : "Could not start microphone. Please check settings.",
-      );
-    }
-  }
-
-  // Execute recognized voice intent
-  void _executeVoiceCommand(String spokenText) {
-    if (!mounted) return;
-    setState(() {
-      _isVoiceAssistantListening = false;
-    });
-
-    final isBengali = VoiceService.instance.isBengali;
-    final intent = SpeechService.instance.parseIntent(spokenText);
-
-    switch (intent.type) {
-      case VoiceIntentType.openCurrency:
-        VoiceService.instance.speak(isBengali ? intent.responseBengali : intent.responseEnglish);
-        _videoController?.pause();
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CurrencyScreen()),
-        ).then((_) {
-          if (mounted) _videoController?.play();
-        });
-        break;
-
-      case VoiceIntentType.openObstacle:
-        VoiceService.instance.speak(isBengali ? intent.responseBengali : intent.responseEnglish);
-        _videoController?.pause();
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const WalkingRadarScreen()),
-        ).then((_) {
-          if (mounted) _videoController?.play();
-        });
-        break;
-
-      case VoiceIntentType.help:
-      case VoiceIntentType.stop:
-      case VoiceIntentType.unknown:
-        VoiceService.instance.speak(isBengali ? intent.responseBengali : intent.responseEnglish);
-        break;
-    }
   }
 
   @override
@@ -206,500 +64,354 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final isBengali = VoiceService.instance.isBengali;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background Video Animation (bg.mp4)
-          if (_isVideoInitialized && _videoController != null)
-            SizedBox.expand(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _videoController!.value.size.width,
-                  height: _videoController!.value.size.height,
-                  child: VideoPlayer(_videoController!),
-                ),
-              ),
-            )
-          else
-            Container(color: AppTheme.background),
+      body: LiquidGlassBackground(
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // ==========================================
+                // Top Header Row: Logo, Title & Utility Buttons (Liquid Glass)
+                // ==========================================
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        LiquidGlassContainer(
+                          radius: 16,
+                          blurSigma: 18.0,
+                          opacity: 0.85,
+                          borderColor: AppTheme.cardBorder,
+                          borderWidth: 2.5,
+                          padding: const EdgeInsets.all(4),
+                          child: SizedBox(
+                            width: 52,
+                            height: 52,
+                            child: Image.asset(
+                              'assets/logo.png',
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "BLINDFOLD",
+                              style: TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                            Text(
+                              "YOUR WORLD, YOUR WAY",
+                              style: TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        // Language Toggle (Liquid Glass)
+                        Semantics(
+                          label: isBengali ? "Switch to English speech" : "বাংলা ভাষায় পরিবর্তন করুন",
+                          button: true,
+                          child: LiquidGlassContainer(
+                            radius: 16,
+                            blurSigma: 18.0,
+                            opacity: 0.85,
+                            borderColor: AppTheme.cardBorder,
+                            borderWidth: 2.5,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            onTap: () {
+                              setState(() {
+                                VoiceService.instance.toggleLanguage();
+                              });
+                            },
+                            child: SizedBox(
+                              height: 52,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.language, size: 22, color: AppTheme.cardBorder),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    isBengali ? "বাংলা" : "ENG",
+                                    style: const TextStyle(
+                                      color: AppTheme.cardBorder,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
 
-          // Lightweight Subtle Vignette so background video (bg.mp4) is clearly visible
-          Positioned.fill(
-            child: Container(
-              color: Colors.black.withValues(alpha: 0.15),
-            ),
-          ),
-
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // ==========================================
-                  // Top Tactile Clarity Light Header (Glass)
-                  // ==========================================
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(14),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                              child: Container(
-                                width: 48,
-                                height: 48,
-                                decoration: AppTheme.tactileCardDecoration(
-                                  radius: 14,
-                                  backgroundColor: Colors.white.withValues(alpha: 0.35),
-                                  borderWidth: 2.5,
-                                  offsetY: 2.5,
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                clipBehavior: Clip.antiAlias,
-                                child: Image.asset(
-                                  'assets/logo.png',
-                                  fit: BoxFit.contain,
+                        // Mute Audio Toggle (Liquid Glass)
+                        Semantics(
+                          label: VoiceService.instance.isMuted ? "Unmute Voice" : "Mute Voice",
+                          button: true,
+                          child: LiquidGlassContainer(
+                            radius: 16,
+                            blurSigma: 18.0,
+                            opacity: 0.85,
+                            borderColor: AppTheme.cardBorder,
+                            borderWidth: 2.5,
+                            onTap: () {
+                              setState(() {
+                                VoiceService.instance.toggleMute();
+                              });
+                              if (!VoiceService.instance.isMuted) {
+                                VoiceService.instance.speak(
+                                  isBengali ? "অডিও চালু হয়েছে।" : "Audio unmuted.",
+                                );
+                              }
+                            },
+                            child: SizedBox(
+                              width: 52,
+                              height: 52,
+                              child: Center(
+                                child: Icon(
+                                  VoiceService.instance.isMuted ? Icons.volume_off : Icons.volume_up,
+                                  color: VoiceService.instance.isMuted
+                                      ? AppTheme.textSecondary
+                                      : AppTheme.cardBorder,
+                                  size: 26,
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "BLINDFOLD",
-                                style: TextStyle(
-                                  color: AppTheme.textPrimary,
-                                  fontSize: 21,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.1,
-                                ),
-                              ),
-                              Text(
-                                "YOUR WORLD, YOUR WAY",
-                                style: TextStyle(
-                                  color: AppTheme.textSecondary,
-                                  fontSize: 10.5,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          // Language Toggle (বাংলা / ENG)
-                          Semantics(
-                            label: isBengali ? "Switch to English speech" : "বাংলা ভাষায় পরিবর্তন করুন",
-                            button: true,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                child: Container(
-                                  height: 44,
-                                  decoration: AppTheme.tactileButtonDecoration(
-                                    radius: 14,
-                                    backgroundColor: Colors.white.withValues(alpha: 0.35),
-                                    offsetY: 2.5,
-                                  ),
-                                  child: InkWell(
-                                    onTap: () {
-                                      setState(() {
-                                        VoiceService.instance.toggleLanguage();
-                                      });
-                                    },
-                                    borderRadius: BorderRadius.circular(14),
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // ========================================================
+                // Giant Gesture Surface (Liquid Glass Interactive Panel)
+                // Single Tap -> Obstacle Avoidance | Double Tap -> Currency
+                // ========================================================
+                Expanded(
+                  child: Semantics(
+                    label: isBengali
+                        ? "প্রধান নিয়ন্ত্রণ ক্ষেত্র। একবার ট্যাপ করলে অবস্ট্যাকল মোড শুরু হবে। দুইবার ট্যাপ করলে কারেন্সি মোড শুরু হবে।"
+                        : "Main gesture area. Tap once for obstacle avoidance mode. Double tap for currency mode.",
+                    button: true,
+                    child: GestureDetector(
+                      onTap: _startObstacleMode,
+                      onDoubleTap: _startCurrencyMode,
+                      child: LiquidGlassContainer(
+                        radius: 24,
+                        blurSigma: 24.0,
+                        opacity: 0.86,
+                        borderColor: AppTheme.cardBorder,
+                        borderWidth: 2.8,
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // ----------------------------------------
+                            // Mode 1: Single Tap -> Obstacle Radar (Liquid Amber Glass)
+                            // ----------------------------------------
+                            Expanded(
+                              child: LiquidGlassContainer(
+                                radius: 18,
+                                blurSigma: 14.0,
+                                tintColor: AppTheme.accentAmberLight,
+                                opacity: 0.90,
+                                borderColor: AppTheme.cardBorder,
+                                borderWidth: 2.5,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.accentAmber,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppTheme.cardBorder, width: 2.5),
+                                      ),
+                                      child: const Icon(
+                                        Icons.radar,
+                                        size: 32,
+                                        color: AppTheme.cardBorder,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          const Icon(Icons.language, size: 19, color: AppTheme.cardBorder),
-                                          const SizedBox(width: 4),
                                           Text(
-                                            isBengali ? "বাংলা" : "ENG",
+                                            isBengali ? "একবার ট্যাপ করুন" : "SINGLE TAP",
                                             style: const TextStyle(
                                               color: AppTheme.cardBorder,
-                                              fontSize: 13.5,
+                                              fontSize: 14,
                                               fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.8,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            isBengali ? "অবস্ট্যাকল মোড" : "Obstacle Avoidance",
+                                            style: const TextStyle(
+                                              color: AppTheme.cardBorder,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          Text(
+                                            isBengali ? "বাধা, সিঁড়ি ও দূরত্ব শনাক্তকরণ" : "Detect obstacles, stairs & distance",
+                                            style: const TextStyle(
+                                              color: AppTheme.textSecondary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          // Mute Audio Toggle with Shape-Aware Circular Decoration
-                          Semantics(
-                            label: VoiceService.instance.isMuted ? "Unmute Voice" : "Mute Voice",
-                            button: true,
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(24),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: AppTheme.tactileCircleDecoration(
-                                    backgroundColor: Colors.white.withValues(alpha: 0.35),
-                                    offsetY: 2.5,
-                                  ),
-                                  child: IconButton(
-                                    iconSize: 24,
-                                    padding: EdgeInsets.zero,
-                                    icon: Icon(
-                                      VoiceService.instance.isMuted ? Icons.volume_off : Icons.volume_up,
-                                      color: VoiceService.instance.isMuted
-                                          ? AppTheme.textSecondary
-                                          : AppTheme.cardBorder,
-                                    ),
-                                    onPressed: () {
-                                      setState(() {
-                                        VoiceService.instance.toggleMute();
-                                      });
-                                      if (!VoiceService.instance.isMuted) {
-                                        VoiceService.instance.speak(
-                                          isBengali ? "অডিও চালু হয়েছে।" : "Audio unmuted.",
-                                        );
-                                      }
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-
-                  // ========================================================
-                  // Giant Gesture Surface (Transparent Frosted Glass)
-                  // Single Tap -> Obstacle Avoidance | Double Tap -> Currency
-                  // ========================================================
-                  Expanded(
-                    child: Semantics(
-                      label: isBengali
-                          ? "প্রধান নিয়ন্ত্রণ ক্ষেত্র। একবার ট্যাপ করলে অবস্ট্যাকল মোড শুরু হবে। দুইবার ট্যাপ করলে কারেন্সি মোড শুরু হবে।"
-                          : "Main gesture area. Tap once for obstacle avoidance mode. Double tap for currency mode.",
-                      button: true,
-                      child: GestureDetector(
-                        onTap: _startObstacleMode,
-                        onDoubleTap: _startCurrencyMode,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(22),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                            child: Container(
-                              decoration: AppTheme.tactileCardDecoration(
-                                radius: 22,
-                                backgroundColor: Colors.white.withValues(alpha: 0.22),
-                                offsetY: 3.5,
-                              ),
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // ----------------------------------------
-                                  // Mode 1: Single Tap -> Obstacle Radar (Transparent Amber Glass)
-                                  // ----------------------------------------
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.accentAmber.withValues(alpha: 0.25),
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: AppTheme.cardBorder, width: 2.5),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 52,
-                                                height: 52,
-                                                decoration: BoxDecoration(
-                                                  color: AppTheme.accentAmber.withValues(alpha: 0.85),
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(color: AppTheme.cardBorder, width: 2.5),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.radar,
-                                                  size: 30,
-                                                  color: AppTheme.cardBorder,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      isBengali ? "একবার ট্যাপ করুন" : "SINGLE TAP",
-                                                      style: const TextStyle(
-                                                        color: AppTheme.cardBorder,
-                                                        fontSize: 13,
-                                                        fontWeight: FontWeight.w900,
-                                                        letterSpacing: 0.8,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      isBengali ? "অবস্ট্যাকল মোড" : "Obstacle Avoidance",
-                                                      style: const TextStyle(
-                                                        color: AppTheme.cardBorder,
-                                                        fontSize: 19,
-                                                        fontWeight: FontWeight.w900,
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      isBengali ? "বাধা, সিঁড়ি ও দূরত্ব শনাক্তকরণ" : "Detect obstacles, stairs & distance",
-                                                      style: const TextStyle(
-                                                        color: AppTheme.textSecondary,
-                                                        fontSize: 11.5,
-                                                        fontWeight: FontWeight.w700,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Icon(
-                                                Icons.arrow_forward_ios,
-                                                size: 20,
-                                                color: AppTheme.cardBorder,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-
-                                  // ----------------------------------------
-                                  // Mode 2: Double Tap -> Currency Reader (Transparent Blue Glass)
-                                  // ----------------------------------------
-                                  Expanded(
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.accentBlue.withValues(alpha: 0.25),
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: AppTheme.cardBorder, width: 2.5),
-                                          ),
-                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                width: 52,
-                                                height: 52,
-                                                decoration: BoxDecoration(
-                                                  color: AppTheme.accentBlue.withValues(alpha: 0.85),
-                                                  shape: BoxShape.circle,
-                                                  border: Border.all(color: AppTheme.cardBorder, width: 2.5),
-                                                ),
-                                                child: const Icon(
-                                                  Icons.payments,
-                                                  size: 30,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: Column(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      isBengali ? "দুইবার ট্যাপ করুন" : "DOUBLE TAP",
-                                                      style: const TextStyle(
-                                                        color: AppTheme.cardBorder,
-                                                        fontSize: 13,
-                                                        fontWeight: FontWeight.w900,
-                                                        letterSpacing: 0.8,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      isBengali ? "কারেন্সি রিডার" : "Currency Reader",
-                                                      style: const TextStyle(
-                                                        color: AppTheme.cardBorder,
-                                                        fontSize: 19,
-                                                        fontWeight: FontWeight.w900,
-                                                      ),
-                                                    ),
-                                                    Text(
-                                                      isBengali ? "ক্যামেরা দিয়ে কি প্রকৃতির নোট শনাক্ত করুন" : "Live camera banknote recognition",
-                                                      style: const TextStyle(
-                                                        color: AppTheme.textSecondary,
-                                                        fontSize: 11.5,
-                                                        fontWeight: FontWeight.w700,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              const Icon(
-                                                Icons.arrow_forward_ios,
-                                                size: 20,
-                                                color: AppTheme.cardBorder,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-
-                                  // Tactile Guidance Strip (Frosted Glass Pill)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.35),
-                                      borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: AppTheme.cardBorder, width: 1.5),
-                                    ),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.touch_app, size: 18, color: AppTheme.cardBorder),
-                                        const SizedBox(width: 6),
-                                        Flexible(
-                                          child: Text(
-                                            isBengali ? "সক্রিয় করতে এই কার্ডের যেকোনো জায়গায় ট্যাপ করুন" : "Tap anywhere inside this box to activate",
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              color: AppTheme.cardBorder,
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // ========================================================
-                  // Dedicated Voice Assistant Button (Transparent Glass Card)
-                  // ========================================================
-                  Semantics(
-                    label: _isVoiceAssistantListening
-                        ? (isBengali ? "ভয়েস অ্যাসিস্ট্যান্ট শুনছে। বিরতির জন্য ট্যাপ করুন।" : "Voice Assistant is listening. Tap to pause.")
-                        : (isBengali ? "ভয়েস অ্যাসিস্ট্যান্ট বোতাম। কথা বলতে ট্যাপ করুন।" : "Voice Assistant Button. Tap to speak commands."),
-                    button: true,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          height: 72,
-                          decoration: AppTheme.tactileButtonDecoration(
-                            radius: 18,
-                            backgroundColor: _isVoiceAssistantListening
-                                ? AppTheme.accentAmber.withValues(alpha: 0.45)
-                                : Colors.white.withValues(alpha: 0.30),
-                            offsetY: 3.0,
-                          ),
-                          child: InkWell(
-                            onTap: _handleVoiceAssistantPressed,
-                            borderRadius: BorderRadius.circular(18),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 44,
-                                    height: 44,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.accentAmber.withValues(alpha: 0.85),
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: AppTheme.cardBorder, width: 2),
-                                    ),
-                                    child: Icon(
-                                      _isVoiceAssistantListening ? Icons.mic : Icons.mic_none,
-                                      size: 26,
+                                    const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 22,
                                       color: AppTheme.cardBorder,
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          _isVoiceAssistantListening
-                                              ? (isBengali ? "ভয়েস অ্যাসিস্ট্যান্ট (শুনছে)" : "VOICE ASSISTANT (LISTENING)")
-                                              : (isBengali ? "ভয়েস অ্যাসিস্ট্যান্ট" : "VOICE ASSISTANT"),
-                                          style: const TextStyle(
-                                            color: AppTheme.cardBorder,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 0.5,
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+
+                            // ----------------------------------------
+                            // Mode 2: Double Tap -> Currency Reader (Liquid Blue Glass)
+                            // ----------------------------------------
+                            Expanded(
+                              child: LiquidGlassContainer(
+                                radius: 18,
+                                blurSigma: 14.0,
+                                tintColor: AppTheme.accentBlueLight,
+                                opacity: 0.90,
+                                borderColor: AppTheme.cardBorder,
+                                borderWidth: 2.5,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 56,
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.accentBlue,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: AppTheme.cardBorder, width: 2.5),
+                                      ),
+                                      child: const Icon(
+                                        Icons.payments,
+                                        size: 32,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            isBengali ? "দুইবার ট্যাপ করুন" : "DOUBLE TAP",
+                                            style: const TextStyle(
+                                              color: AppTheme.cardBorder,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: 0.8,
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          _recognizedSpeechText.isNotEmpty
-                                              ? "\"$_recognizedSpeechText\""
-                                              : (_isVoiceAssistantListening
-                                                  ? (isBengali ? "আপনার অনুরোধ বলুন..." : "Speak your request now...")
-                                                  : (isBengali ? "নির্দেশ দিতে ট্যাপ করুন" : "Tap to speak voice instructions")),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: _recognizedSpeechText.isNotEmpty ? AppTheme.cardBorder : AppTheme.textSecondary,
-                                            fontSize: 11.5,
-                                            fontWeight: _recognizedSpeechText.isNotEmpty ? FontWeight.w900 : FontWeight.w700,
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            isBengali ? "কারেন্সি রিডার" : "Currency Reader",
+                                            style: const TextStyle(
+                                              color: AppTheme.cardBorder,
+                                              fontSize: 20,
+                                              fontWeight: FontWeight.w900,
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                          Text(
+                                            isBengali ? "ক্যামেরা দিয়ে ব্যাঙ্কনোট শনাক্তকরণ" : "Live camera banknote recognition",
+                                            style: const TextStyle(
+                                              color: AppTheme.textSecondary,
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 22,
+                                      color: AppTheme.cardBorder,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+
+                            // Tactile Guidance Strip (Liquid Glass Pill)
+                            LiquidGlassContainer(
+                              radius: 12,
+                              blurSigma: 10.0,
+                              tintColor: Colors.white,
+                              opacity: 0.80,
+                              borderColor: AppTheme.cardBorder,
+                              borderWidth: 1.5,
+                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.touch_app, size: 20, color: AppTheme.cardBorder),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      isBengali ? "সক্রিয় করতে এই কার্ডের যেকোনো জায়গায় ট্যাপ করুন" : "Tap anywhere inside this box to activate",
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: AppTheme.cardBorder,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w800,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

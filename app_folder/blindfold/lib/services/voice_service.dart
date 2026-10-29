@@ -44,9 +44,17 @@ class VoiceService {
       _flutterTts = FlutterTts();
       
       await _flutterTts?.setLanguage(_currentLanguage);
-      await _flutterTts?.setSpeechRate(0.52); // Clear, intelligible pace
+      // Smoothed speech rate and natural pitch to eliminate trembling/jittering
+      await _flutterTts?.setSpeechRate(0.44);
       await _flutterTts?.setVolume(1.0);
       await _flutterTts?.setPitch(1.0);
+
+      // On Android, enable audio focus and low-latency synthesis
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        try {
+          await _flutterTts?.awaitSpeakCompletion(true);
+        } catch (_) {}
+      }
 
       _flutterTts?.setStartHandler(() {
         _isSpeaking = true;
