@@ -79,6 +79,9 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> with WidgetsBin
   }
 
   Future<void> _initLiveCameraAndDetection() async {
+    // 1. Initialize local on-device TFLite obstacle model
+    await ObstacleDetectorService.instance.loadModel();
+
     try {
       _availableCameras = await availableCameras();
       if (_availableCameras.isEmpty) {

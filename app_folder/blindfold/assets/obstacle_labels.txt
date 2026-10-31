@@ -1,0 +1,10 @@
+bench
+bike
+car
+chair
+dog
+person
+pothole
+stairs
+tree
+zebra_crossing
