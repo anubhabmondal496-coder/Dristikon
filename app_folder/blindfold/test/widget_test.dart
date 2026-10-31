@@ -8,12 +8,12 @@ void main() {
     await tester.pumpWidget(const BlindFoldApp());
 
     // Verify that the title and key components render
-    expect(find.text('BLINDFOLD'), findsOneWidget);
-
     if (VoiceService.instance.isBengali) {
+      expect(find.text('দৃষ্টিকোণ'), findsOneWidget);
       expect(find.text('অবস্ট্যাকল মোড'), findsOneWidget);
       expect(find.text('কারেন্সি রিডার'), findsOneWidget);
     } else {
+      expect(find.text('DRISHTIKON'), findsOneWidget);
       expect(find.text('Obstacle Avoidance'), findsOneWidget);
       expect(find.text('Currency Reader'), findsOneWidget);
     }

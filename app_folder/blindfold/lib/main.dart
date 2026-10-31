@@ -34,7 +34,7 @@ class BlindFoldApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'BlindFold',
+      title: 'দৃষ্টিকোণ',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTactileTheme,
       home: const HomeScreen(),

@@ -79,21 +79,16 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> with WidgetsBin
   }
 
   Future<void> _initLiveCameraAndDetection() async {
-    // 1. Check backend readiness asynchronously
-    ObstacleDetectorService.instance.checkBackendHealth();
-
-    // 2. Initialize Hardware Camera
     try {
       _availableCameras = await availableCameras();
       if (_availableCameras.isEmpty) {
-        debugPrint("[WalkingRadar] No cameras found. Using simulation mode.");
         setState(() {
+          _isCameraInitialized = false;
           _isLiveFeedActive = false;
         });
         return;
       }
 
-      // Pick rear back-facing camera
       final backCamera = _availableCameras.firstWhere(
         (cam) => cam.lensDirection == CameraLensDirection.back,
         orElse: () => _availableCameras.first,
@@ -327,195 +322,280 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> with WidgetsBin
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
 
                 // ========================================================
-                // Optional Live Camera Viewport Window (Subtle Glass Viewport)
-                // ========================================================
-                if (_isCameraInitialized && _cameraController != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: LiquidGlassContainer(
-                      radius: 18,
-                      blurSigma: 8.0,
-                      opacity: 0.85,
-                      borderColor: AppTheme.cardBorder,
-                      borderWidth: 2.0,
-                      padding: const EdgeInsets.all(4),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: SizedBox(
-                          height: 120,
-                          width: double.infinity,
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              CameraPreview(_cameraController!),
-                              // Live HUD target reticle
-                              Center(
-                                child: Container(
-                                  width: 180,
-                                  height: 80,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: urgencyColor.withValues(alpha: 0.9),
-                                      width: 2.5,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                ),
-                              ),
-                              Positioned(
-                                top: 6,
-                                left: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.65),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    _liveHazards.isNotEmpty
-                                        ? "YOLOv8 RADAR: ${_current.title} (${_liveHazards.length} in view)"
-                                        : "YOLOv8 RADAR: ${_current.title}",
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                // ========================================================
-                // Giant Distance Readout Card (Liquid Glass Refractive Panel)
+                // Main Scrollable Area with Square YOLO Viewport
                 // ========================================================
                 Expanded(
-                  flex: 3,
-                  child: Semantics(
-                    label:
-                        "Detected obstacle ${_current.title}. Distance ${_current.distanceFormatted}, ${_current.stepsFormatted}. Zone ${_current.zoneLabel}. Tap anywhere to hear again.",
-                    button: true,
-                    child: LiquidGlassContainer(
-                      radius: 24,
-                      blurSigma: 24.0,
-                      opacity: 0.84,
-                      borderColor: AppTheme.cardBorder,
-                      borderWidth: 2.8,
-                      padding: const EdgeInsets.all(18),
-                      onTap: () {
-                        final isBn = VoiceService.instance.isBengali;
-                        VoiceService.instance.speak(isBn ? _current.spokenTextBengali : _current.spokenText);
-                      },
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Zone Indicator Pill
-                          LiquidGlassContainer(
-                            radius: 30,
-                            blurSigma: 10.0,
-                            tintColor: urgencyBg,
-                            opacity: 0.92,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ========================================================
+                        // Square YOLO Visual Interface (1:1 Aspect Ratio)
+                        // Proportionate to phone width for optimal YOLO inference
+                        // ========================================================
+                        AspectRatio(
+                          aspectRatio: 1.0,
+                          child: LiquidGlassContainer(
+                            radius: 22,
+                            blurSigma: 12.0,
+                            opacity: 0.88,
                             borderColor: AppTheme.cardBorder,
-                            borderWidth: 2.0,
-                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-                            child: Text(
-                              isBengali ? "দিক: ${_current.zoneLabelBengali}" : "ZONE: ${_current.zoneLabel}",
-                              style: const TextStyle(
-                                color: AppTheme.cardBorder,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.2,
+                            borderWidth: 2.8,
+                            padding: const EdgeInsets.all(5),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  // 1. Live Camera Feed or Sonar Radar Grid
+                                  if (_isCameraInitialized && _cameraController != null)
+                                    FittedBox(
+                                      fit: BoxFit.cover,
+                                      child: SizedBox(
+                                        width: _cameraController!.value.previewSize?.height ?? 400,
+                                        height: _cameraController!.value.previewSize?.width ?? 400,
+                                        child: CameraPreview(_cameraController!),
+                                      ),
+                                    )
+                                  else
+                                    // High-Tech Radar Sonar Scanning Grid (Simulation Mode)
+                                    Container(
+                                      color: const Color(0xFF0F172A),
+                                      child: CustomPaint(
+                                        painter: _RadarGridPainter(
+                                          urgencyColor: urgencyColor,
+                                        ),
+                                      ),
+                                    ),
+
+                                  // 2. High-Tech HUD Aiming Reticle (Square Target Box)
+                                  Center(
+                                    child: Container(
+                                      width: 140,
+                                      height: 140,
+                                      decoration: BoxDecoration(
+                                        border: Border.all(
+                                          color: urgencyColor.withValues(alpha: 0.9),
+                                          width: 2.5,
+                                        ),
+                                        borderRadius: BorderRadius.circular(14),
+                                      ),
+                                      child: Stack(
+                                        children: [
+                                          // Crosshair Center
+                                          Center(
+                                            child: Container(
+                                              width: 12,
+                                              height: 12,
+                                              decoration: BoxDecoration(
+                                                color: urgencyColor,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+
+                                  // 3. Top YOLO Live Status Pill
+                                  Positioned(
+                                    top: 10,
+                                    left: 10,
+                                    right: 10,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(alpha: 0.75),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.white24, width: 1),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.fiber_manual_record,
+                                                size: 11,
+                                                color: _isCameraInitialized ? AppTheme.alertSafe : AppTheme.accentAmber,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                _liveHazards.isNotEmpty
+                                                    ? "YOLOv8: ${_current.title} (${_liveHazards.length} IN VIEW)"
+                                                    : "YOLOv8: ${_current.title}",
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.w900,
+                                                  letterSpacing: 0.6,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: urgencyColor.withValues(alpha: 0.90),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            isBengali ? _current.zoneLabelBengali : _current.zoneLabel,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  // 4. Bottom Distance Readout Overlay Strip
+                                  Positioned(
+                                    bottom: 10,
+                                    left: 10,
+                                    right: 10,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.80),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.white24, width: 1),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            isBengali
+                                                ? _current.distanceFormattedBengali
+                                                : _current.distanceFormatted,
+                                            style: TextStyle(
+                                              color: urgencyColor,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w900,
+                                            ),
+                                          ),
+                                          Text(
+                                            isBengali
+                                                ? "আনুমানিক ${_current.stepsFormattedBengali}"
+                                                : "APPROX. ${_current.stepsFormatted}",
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w800,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const SizedBox(height: 12),
+                        ),
+                        const SizedBox(height: 12),
 
-                          // Obstacle Title
-                          Text(
-                            isBengali && _current.titleBengali.isNotEmpty
-                                ? _current.titleBengali
-                                : _current.title,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppTheme.cardBorder,
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Distance Numerical Sub-Card (Frosted Glass Inset)
-                          LiquidGlassContainer(
-                            radius: 18,
-                            blurSigma: 14.0,
-                            tintColor: Colors.white,
-                            opacity: 0.70,
+                        // ========================================================
+                        // Tactile Distance & Voice Advice Card
+                        // ========================================================
+                        Semantics(
+                          label:
+                              "Detected obstacle ${_current.title}. Distance ${_current.distanceFormatted}, ${_current.stepsFormatted}. Zone ${_current.zoneLabel}. Tap anywhere to hear again.",
+                          button: true,
+                          child: LiquidGlassContainer(
+                            radius: 20,
+                            blurSigma: 16.0,
+                            opacity: 0.86,
                             borderColor: AppTheme.cardBorder,
-                            borderWidth: 2.0,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            borderWidth: 2.5,
+                            padding: const EdgeInsets.all(16),
+                            onTap: () {
+                              final isBn = VoiceService.instance.isBengali;
+                              VoiceService.instance.speak(isBn ? _current.spokenTextBengali : _current.spokenText);
+                            },
                             child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  isBengali ? _current.distanceFormattedBengali : _current.distanceFormatted,
-                                  style: TextStyle(
-                                    color: urgencyColor,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                  ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        isBengali && _current.titleBengali.isNotEmpty
+                                            ? _current.titleBengali
+                                            : _current.title,
+                                        style: const TextStyle(
+                                          color: AppTheme.cardBorder,
+                                          fontSize: 26,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: urgencyBg,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: AppTheme.cardBorder, width: 1.8),
+                                      ),
+                                      child: Text(
+                                        isBengali ? "দিক: ${_current.zoneLabelBengali}" : "ZONE: ${_current.zoneLabel}",
+                                        style: const TextStyle(
+                                          color: AppTheme.cardBorder,
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 4),
+                                const SizedBox(height: 10),
+
+                                // Spoken Advice
                                 Text(
-                                  isBengali ? "আনুমানিক ${_current.stepsFormattedBengali}" : "APPROX. ${_current.stepsFormatted}",
+                                  isBengali && _current.adviceBengali.isNotEmpty
+                                      ? _current.adviceBengali
+                                      : _current.advice,
                                   style: const TextStyle(
                                     color: AppTheme.cardBorder,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+
+                                // Repeat instruction
+                                Text(
+                                  isBengali
+                                      ? "পুনরায় শুনতে কার্ডটিতে ট্যাপ করুন"
+                                      : "Tap card anytime to repeat voice alert",
+                                  style: const TextStyle(
+                                    color: AppTheme.textSecondary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const SizedBox(height: 14),
-
-                          // Advice Text
-                          Text(
-                            isBengali && _current.adviceBengali.isNotEmpty
-                                ? _current.adviceBengali
-                                : _current.advice,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppTheme.cardBorder,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
-
-                          // Repeat Guidance Instruction
-                          Text(
-                            isBengali
-                                ? "পুনরায় শুনতে কার্ডটিতে ট্যাপ করুন"
-                                : "Tap card anytime to repeat voice alert",
-                            style: const TextStyle(
-                              color: AppTheme.textSecondary,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
 
                 // ========================================================
                 // Bottom Physical Action Buttons (Liquid Glass)
@@ -543,7 +623,7 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> with WidgetsBin
                             }
                           },
                           child: SizedBox(
-                            height: 66,
+                            height: 64,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -582,7 +662,7 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> with WidgetsBin
                           borderWidth: 2.5,
                           onTap: _togglePause,
                           child: SizedBox(
-                            height: 66,
+                            height: 64,
                             child: Center(
                               child: Icon(
                                 _isPaused ? Icons.play_arrow : Icons.pause,
@@ -603,4 +683,51 @@ class _WalkingRadarScreenState extends State<WalkingRadarScreen> with WidgetsBin
       ),
     );
   }
+}
+
+/// Custom painter for the futuristic Sonar Radar grid when in simulation or loading
+class _RadarGridPainter extends CustomPainter {
+  final Color urgencyColor;
+  _RadarGridPainter({required this.urgencyColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final maxRadius = size.width / 2;
+
+    final gridPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    final axisPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    // Draw concentric range rings (0.5m, 1.5m, 3.0m)
+    for (int i = 1; i <= 3; i++) {
+      canvas.drawCircle(center, maxRadius * (i / 3), gridPaint);
+    }
+
+    // Draw Crosshair Axes
+    canvas.drawLine(Offset(center.dx, 0), Offset(center.dx, size.height), axisPaint);
+    canvas.drawLine(Offset(0, center.dy), Offset(size.width, center.dy), axisPaint);
+
+    // Draw animated scanner sweep tint
+    final sweepPaint = Paint()
+      ..shader = SweepGradient(
+        colors: [
+          urgencyColor.withValues(alpha: 0.0),
+          urgencyColor.withValues(alpha: 0.35),
+        ],
+        stops: const [0.75, 1.0],
+      ).createShader(Rect.fromCircle(center: center, radius: maxRadius));
+
+    canvas.drawCircle(center, maxRadius, sweepPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadarGridPainter oldDelegate) =>
+      oldDelegate.urgencyColor != urgencyColor;
 }

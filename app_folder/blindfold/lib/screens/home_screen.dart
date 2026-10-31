@@ -90,18 +90,18 @@ class _HomeScreenState extends State<HomeScreen> {
                             width: 52,
                             height: 52,
                             child: Image.asset(
-                              'assets/logo.png',
+                              'assets/logo_J2M.png',
                               fit: BoxFit.contain,
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
-                        const Column(
+                        Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              "BLINDFOLD",
-                              style: TextStyle(
+                              isBengali ? "দৃষ্টিকোণ" : "DRISHTIKON",
+                              style: const TextStyle(
                                 color: AppTheme.textPrimary,
                                 fontSize: 22,
                                 fontWeight: FontWeight.w900,
@@ -109,8 +109,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             Text(
-                              "YOUR WORLD, YOUR WAY",
-                              style: TextStyle(
+                              isBengali ? "আপনার পথ, আপনার স্বাধীনতা" : "YOUR WORLD, YOUR WAY",
+                              style: const TextStyle(
                                 color: AppTheme.textSecondary,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w800,
